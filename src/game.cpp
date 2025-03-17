@@ -93,8 +93,8 @@ bool createGameSym(Game& game){
             LOG("[game] Couldn't open goldberg steam_appid.txt to edit.");
             return false;
         }
-        f_localsave << game.steam_appid << endl;
-        f_localsave.close();
+        f_steam_appid << game.steam_appid << endl;
+        f_steam_appid.close();
 
         // Create find_interfaces file from game's original steam dll, put it in sym folder
         string steam_dll;
@@ -103,7 +103,7 @@ bool createGameSym(Game& game){
         string path_find_interfaces = PATH_EXECDIR + "/data/goldberg/find_interfaces.sh";
         src = game.rootpath + "/" + game.goldbergpath + "/" + steam_dll;
         dest = PATH_SYM + "/" + game.goldbergpath + "/steam_interfaces.txt";
-        int ret = Util::Exec(path_find_interfaces + "\"" + src + "\" > \"" + dest + "\"");
+        int ret = Util::Exec(path_find_interfaces + " \"" + src + "\" > \"" + dest + "\"");
         if (ret != 0) { LOG("Couldn't create goldberg steam_interfaces.txt"); return false; }
     }
 

@@ -69,14 +69,16 @@ bool gameUniqueDirs(string name, Game game){
     return true;
 }
 
-strvector list(){
+// For player profile selection we want to include guest but for the view profiles menu we don't
+strvector listAll(bool include_guest){
     strvector out;
-    out.push_back("Guest");
     for (const auto& entry : fs::directory_iterator(PATH_PARTY + "/profiles/")) {
         if (fs::is_directory(entry)) {
             out.push_back(entry.path().filename().string());
         }
     }
+    std::sort(out.begin(), out.end());
+    if (include_guest) { out.insert(out.begin(), "Guest"); }
     return out;
 }
 

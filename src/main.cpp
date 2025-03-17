@@ -17,7 +17,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
-#include <stdio.h>
+
 #include <SDL2/SDL.h>
 
 const string PATH_EXECDIR = fs::read_symlink("/proc/self/exe").parent_path().string();
@@ -28,18 +28,16 @@ string PATH_SYM;
 std::vector<Gamepad> GAMEPADS{};
 std::vector<Player> PLAYERS{};
 nlohmann::json SETTINGS;
-std::ofstream f_log;
+std::ofstream f_log(string(PATH_EXECDIR + "/log.txt").c_str());
 
 int main(int, char**)
 {
-    string path_f_log = PATH_EXECDIR + "/log.txt";
-    std::ofstream f_log(path_f_log.c_str());
     if (!f_log){
         cout << "[Party] Couldn't open logging file. Quitting" << endl;
         return 1;
     }
 
-    if (Util::EnvVar("HOME").empty()) { LOG("HOME env var isn't set!"); return 1; }
+    if (Util::EnvVar("HOME").empty()) { LOG("[Party] HOME env var isn't set!"); return 1; }
 
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0){

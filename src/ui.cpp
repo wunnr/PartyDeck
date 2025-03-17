@@ -8,6 +8,7 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 #include <SDL2/SDL.h>
+
 #include <cstddef>
 #include <imgui.h>
 #include <string>
@@ -19,9 +20,10 @@
 enum Page {
     MainMenu,
     DemoWindow,
-    SelectGame,
     SettingsMenu,
     ProfilesMenu,
+    CreateProfileMenu,
+    SelectGame,
     PlayersMenu,
     GameLoading
 };
@@ -41,6 +43,8 @@ private:
 
     bool show_demo_window = true;
 
+    strvector profiles_list;
+
     std::vector<Game> gameslist;
     Game cur_game;
 
@@ -49,6 +53,7 @@ private:
 public:
     bool running = true;
     UI(SDL_Window* window, SDL_Renderer* renderer) {
+
         win = window;
         rend = renderer;
         IMGUI_CHECKVERSION();
@@ -56,7 +61,7 @@ public:
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
+        io.IniFilename = NULL;
         ImFont* font = io.Fonts->AddFontFromFileTTF("data/DroidSans.ttf", 36.0f, nullptr);
         IM_ASSERT(font != nullptr);
 
@@ -86,8 +91,8 @@ public:
 
     void ShowMsg(){
         ImGui::SetNextWindowFocus();
-        ImGui::Begin("Error");
-        ImGui::Text(msg_text.c_str());
+        ImGui::Begin("Message");
+        ImGui::TextWrapped("%s", msg_text.c_str());
         if (ImGui::Button("OK")) show_msg = false;
         ImGui::End();
     }
@@ -142,11 +147,7 @@ public:
         }
 
         string path_f_run = PATH_PARTY + "/run.sh";
-        string kwinscriptpath;
-        //if (DECK){kwinscriptpath = PATH_EXECDIR + "/data/splitscreen_kwin5.js";} // Use Kwin version 5 scripts for Deck since SteamOS hasn't upgraded to KDE 6 yet
-        //else {
-        kwinscriptpath = PATH_EXECDIR + "/data/splitscreen_kwin.js";
-        //}
+        string kwinscriptpath = PATH_EXECDIR + "/data/splitscreen_kwin.js";
         // Ideally we should be using some DBus library to do this instead of relying on qdbus but.... eh.....
         Util::Exec(string("qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript \"" + kwinscriptpath + "\" \"splitscreen\""));
         Util::Exec(string("qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.start"));
@@ -168,20 +169,37 @@ public:
             cur_page = SelectGame;
         }
         if (ImGui::Button("Settings", ImVec2(UI_WIDTH_HALF, 40))) cur_page = SettingsMenu;
-        ImGui::SameLine(); if (ImGui::Button("Profiles", ImVec2(UI_WIDTH_FULL, 40))) cur_page = ProfilesMenu;
-        if (ImGui::Button("DemoWindow", ImVec2(-FLT_MIN, 40))) cur_page = DemoWindow;
+        ImGui::SameLine(); if (ImGui::Button("Profiles", ImVec2(UI_WIDTH_FULL, 40))) {
+            profiles_list = Profiles::listAll(false);
+            cur_page = ProfilesMenu;
+        }
+        // if (ImGui::Button("DemoWindow", ImVec2(-FLT_MIN, 40))) cur_page = DemoWindow;
         // if (ImGui::Button("Test Players", ImVec2(-FLT_MIN, 40))) {
         //     PLAYERS.clear();
         //     GamepadNav(false);
         //     cur_page = PlayersMenu;
         // }
         if (ImGui::Button("Quit", ImVec2(-FLT_MIN, 40))) running = false;
+        // if (ImGui::InputText("test", input_box, sizeof(input_box), ImGuiInputTextFlags_EnterReturnsTrue)){
+        //     CreateMsg(string(input_box));
+        // }
         ImGui::End();
     }
 
     void showDemoWindow(){
         ImGui::ShowDemoWindow(&show_demo_window);
         if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) cur_page = MainMenu;
+    }
+
+    void showProfilesMenu(){
+        ResizeAndCenterNext(400, 400);
+        ImGui::Begin("Profiles");
+        for (const string& profile : profiles_list){
+            ImGui::Selectable(profile.c_str());
+        }
+        if (ImGui::Button("Back", ImVec2(UI_WIDTH_HALF, 40)) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) cur_page = MainMenu;
+        ImGui::SameLine(); if (ImGui::Button("New", ImVec2(UI_WIDTH_FULL, 40))) cur_page = CreateProfileMenu;
+        ImGui::End();
     }
 
     void showSelectGame(){
@@ -200,19 +218,20 @@ public:
     }
 
     void showPlayersMenu(){
+        ResizeAndCenterNext(400, 400);
         ImGui::Begin("Players");
         if (GAMEPADS.size() == 0) { ImGui::Text("No gamepads detected. Connect a gamepad and click Rescan"); }
-        else { ImGui::Text("Accept button (South) = Add gamepad\nBack button (East) = Remove gamepad/Go back\nStart button = Start game"); }
+        else { ImGui::TextWrapped("A/X: Add gamepad\nB/Circle: Remove gamepad/Go back\nStart: Begin game"); }
         for (int i = 0; i < PLAYERS.size(); i++){
             const char* padname = libevdev_get_name(PLAYERS[i].pad.dev);
             ImGui::TextColored(player_colors[i], "P%i: ", i + 1);
             ImGui::SameLine(); ImGui::TextColored(player_colors[i], "%s", padname);
             ImGui::SameLine(); ImGui::TextColored(player_colors[i], "%i", PLAYERS[i].profilechoice);
             switch (pollGamepad(PLAYERS[i].pad.dev)){
-                case UI_LEFT: { PLAYERS[i].profilechoice--; break; }
-                case UI_RIGHT: { PLAYERS[i].profilechoice++; break;}
+                // case UI_LEFT: { PLAYERS[i].profilechoice--; break; }
+                // case UI_RIGHT: { PLAYERS[i].profilechoice++; break;}
                 case UI_BACK: { PLAYERS.erase(PLAYERS.begin() + i); break; }
-                case UI_START: { cur_page = GameLoading; }
+                case UI_START: { cur_page = GameLoading; break; }
             }
         }
         int ret = doPlayersMenu();
@@ -223,12 +242,12 @@ public:
         ImGui::SameLine(); if (ImGui::Button("Rescan", ImVec2(UI_WIDTH_HALF, 40))) { GAMEPADS.clear(); openGamepads(); }
         ImGui::SameLine(); if (ImGui::Button("Start", ImVec2(UI_WIDTH_FULL, 40))) { if (PLAYERS.size() > 0) cur_page = GameLoading; }
         ImGui::End();
-    }
-
-    void showGameLoading(){
-        ImGui::Begin("Loading");
-        ImGui::Text("Starting games...");
-        ImGui::End();
+        if (cur_page == GameLoading){
+            ResizeAndCenterNext(300, 200);
+            ImGui::Begin("Loading");
+            ImGui::Text("Starting games...");
+            ImGui::End();
+        }
     }
 
     void doNewFrame(){
@@ -239,10 +258,10 @@ public:
         if (show_msg) ShowMsg();
         switch (cur_page){
             case MainMenu: showMainMenu(); break;
-            case SelectGame: showSelectGame(); break;
             case DemoWindow: showDemoWindow(); break;
+            case ProfilesMenu: showProfilesMenu(); break;
+            case SelectGame: showSelectGame(); break;
             case PlayersMenu: showPlayersMenu(); break;
-            case GameLoading: showGameLoading(); break;
             default: break;
         }
 
