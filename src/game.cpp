@@ -95,6 +95,16 @@ bool createGameSym(Game& game){
         }
         f_localsave << game.steam_appid << endl;
         f_localsave.close();
+
+        // Create find_interfaces file from game's original steam dll, put it in sym folder
+        string steam_dll;
+        if (game.is_win) { steam_dll = (game.is_32bit) ? string("steam_api.dll") : string("steam_api64.dll"); }
+        else { steam_dll = string("libsteam_api.so"); }
+        string path_find_interfaces = PATH_EXECDIR + "/data/goldberg/find_interfaces.sh";
+        src = game.rootpath + "/" + game.goldbergpath + "/" + steam_dll;
+        dest = PATH_SYM + "/" + game.goldbergpath + "/steam_interfaces.txt";
+        int ret = Util::Exec(path_find_interfaces + "\"" + src + "\" > \"" + dest + "\"");
+        if (ret != 0) { LOG("Couldn't create goldberg steam_interfaces.txt"); return false; }
     }
 
     for (const auto& path : game.copy_paths){
@@ -170,7 +180,6 @@ bool writeGameLaunchScript(Game& game, std::vector<Player>& players){
 
     f_run << "#!/bin/bash" << endl;
     f_run << "export SDL_JOYSTICK_HIDAPI=0" << endl;
-    // f_run << "export ENABLE_GAMESCOPE_WSI=0" << endl; // Fix for laggy gamescope on SteamOS
     if (game.is_32bit){ // SDL2 COMPAT
         f_run << "export SDL_DYNAMIC_API=" << PATH_STEAM << "/ubuntu12_32/steam-runtime/usr/lib/i386-linux-gnu/libSDL2-2.0.so.0" << endl;
     } else { f_run << "export SDL_DYNAMIC_API=" << PATH_STEAM << "/ubuntu12_32/steam-runtime/usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0" << endl; }
@@ -289,7 +298,6 @@ std::vector<Game> scanGames(){
 class Handler{
 private:
     string name;
-    string fancyname;
     string steam_appdir;
     string steam_appid;
     string rootpath;
@@ -306,6 +314,7 @@ private:
     bool win_unique_documents;
     bool linux_unique_localshare;
 public:
+    const string fancyname;
     bool Test(){
         if (name.empty() || !Util::StrIsAlnum(name)){
             LOG("[game] game.name field not found or invalid.");
