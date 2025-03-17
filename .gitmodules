@@ -2,5 +2,5 @@
 	path = include/imgui
 	url = https://github.com/ocornut/imgui.git
 [submodule "include/json"]
-    path = include/json
-    url = https://github.com/nlohmann/json.git
+	path = include/json
+	url = https://github.com/nlohmann/json.git
