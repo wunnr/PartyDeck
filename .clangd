@@ -1,6 +1,0 @@
-CompileFlags:
-  Add:
-    - "-I/home/jo/Documents/PartyDeck/include/imgui/"
-    - "-I/home/jo/Documents/PartyDeck/include/imgui/backends/"
-    - "-I/home/jo/Documents/PartyDeck/include/json/single_include/"
-    - "-I/usr/include/SDL2"

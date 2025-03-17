@@ -1,8 +1,9 @@
 handlers/
 .zed/
+.vs/
+.vscode/
 
-.vs
-.vscode
+.clangd
 imgui.ini
 log.txt
 PartyDeck
