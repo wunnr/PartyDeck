@@ -3,6 +3,7 @@ handlers/
 .vs/
 .vscode/
 
+*.o
 .clangd
 imgui.ini
 log.txt
