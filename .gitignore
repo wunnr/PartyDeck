@@ -4,4 +4,5 @@ handlers/
 .vs
 .vscode
 imgui.ini
+log.txt
 PartyDeck
