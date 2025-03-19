@@ -1,6 +1,6 @@
 
 #include "shared.h"
-#include "game.cpp"
+#include "handler.cpp"
 #include "gamepad.cpp"
 #include "profiles.cpp"
 
@@ -28,7 +28,7 @@ enum Page {
     GameLoading
 };
 
-class UI {
+class GUI {
 private:
     SDL_Window* win;
     SDL_Renderer* rend;
@@ -45,14 +45,14 @@ private:
 
     strvector profiles_list;
 
-    std::vector<Game> gameslist;
-    Game cur_game;
+    std::vector<Handler> handler_list;
+    Handler* handler;
 
     ImVec4 bg_color = ImVec4(0.05f, 0.15f, 0.25f, 1.00f);
     std::vector<ImVec4> player_colors = {ImVec4(0.1f, 0.6f, 1.0f, 1.0f), ImVec4(1.0f, 0.1f, 0.5f, 1.0f), ImVec4(0.0f, 1.0f, 0.5f, 1.0f), ImVec4(1.0f, 0.8f, 0.0f, 1.0f)};
 public:
     bool running = true;
-    UI(SDL_Window* window, SDL_Renderer* renderer) {
+    GUI(SDL_Window* window, SDL_Renderer* renderer) {
 
         win = window;
         rend = renderer;
@@ -105,54 +105,46 @@ public:
             PLAYERS[i].profile = Profiles::guestnames[i];
             fs::path profilepath = fs::path(PATH_PARTY) / "profiles" / PLAYERS[i].profile;
             if (!fs::exists(profilepath)) Profiles::create(PLAYERS[i].profile);
-            ret = Profiles::gameUniqueDirs(PLAYERS[i].profile, cur_game);
-            if (!ret){
-                LOG("Failed setting up game dirs for profile " << PLAYERS[i].profile);
-                CreateMsg("Failed setting up game dirs for profile" + PLAYERS[i].profile + ". Check log for more details ");
-                cur_page = MainMenu;
-                return;
-            }
+
         }
 
-        PATH_SYM = PATH_PARTY + "/game/" + cur_game.name;
-        if (!fs::exists(PATH_SYM)){
-            ret = createGameSym(cur_game);
-            if (!ret){
-                LOG("[party] Failed creating game symlink folder!");
-                CreateMsg("Failed to create game symlink folder. Check log for more details");
-                cur_page = MainMenu;
-                Util::RemoveIfExists(PATH_SYM);
-                return;
-            }
+        if (handler->CreateProfileUniqueDirs(PLAYERS)){
+            LOG("Failed setting up game dirs for profiles");
+            CreateMsg("Failed setting up game dirs for profiles. Check log for more details.");
+            cur_page = MainMenu;
+            return;
         }
 
-        string compatdatapath = PATH_PARTY + "/compatdata";
-        if (cur_game.runtime == "proton" && !fs::exists(compatdatapath)){
-            ret = createProtonCompatdata(cur_game);
-            if (!ret){
-                LOG("[party] Failed creating compatdata folder!");
-                CreateMsg("Failed to create Wine/Proton data folder. Check log for more details");
-                cur_page = MainMenu;
-                Util::RemoveIfExists(compatdatapath);
-                return;
-            }
+        if (handler->CreateGameSymlinkDir() == false){
+            LOG("[party] Failed creating game symlink folder!");
+            CreateMsg("Failed to create game symlink folder. Check log for more details");
+            cur_page = MainMenu;
+            Util::RemoveIfExists(PATH_SYM);
+            return;
         }
 
-        ret = writeGameLaunchScript(cur_game, PLAYERS);
-        if (!ret){
+        if (handler->CreateCompatdataDir() == false){
+            LOG("[party] Failed creating compatdata folder!");
+            CreateMsg("Failed to create Wine/Proton data folder. Check log for more details");
+            cur_page = MainMenu;
+            Util::RemoveIfExists(PATH_PARTY / "compatdata");
+            return;
+        }
+
+        if (handler->WriteGameLaunchScript(PLAYERS) == false){
             LOG("[party] Failed writing launch script!");
             CreateMsg("Failed to write game launch script. Check log for more details");
             cur_page = MainMenu;
             return;
         }
 
-        string path_f_run = PATH_PARTY + "/run.sh";
-        string kwinscriptpath = PATH_EXECDIR + "/data/splitscreen_kwin.js";
+        path path_f_run = PATH_PARTY / "run.sh";
+        path kwinscriptpath = PATH_EXECDIR / "data/splitscreen_kwin.js";
         // Ideally we should be using some DBus library to do this instead of relying on qdbus but.... eh.....
-        Util::Exec(string("qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript \"" + kwinscriptpath + "\" \"splitscreen\""));
+        Util::Exec(string("qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript \"" + kwinscriptpath.string() + "\" \"splitscreen\""));
         Util::Exec(string("qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.start"));
         closeGamepads();
-        int execret = Util::Exec(path_f_run);
+        int execret = Util::Exec(path_f_run.string());
         if (execret != 0) {
             CreateMsg("Games closed unexpectedly. Check log for more details");
             GamepadNav(true);
@@ -165,7 +157,7 @@ public:
         ResizeAndCenterNext(400, 400);
         ImGui::Begin("PartyDeck", NULL, window_flags);
         if (ImGui::Button("Play", ImVec2(-FLT_MIN, 40))){
-            gameslist = scanGames();
+            handler_list = scanHandlers();
             cur_page = SelectGame;
         }
         if (ImGui::Button("Settings", ImVec2(UI_WIDTH_HALF, 40))) cur_page = SettingsMenu;
@@ -205,12 +197,10 @@ public:
     void showSelectGame(){
         ResizeAndCenterNext(400, 400);
         ImGui::Begin("Select Game", NULL, window_flags);
-        for (Game& game: gameslist){
-            string name = game.fancyname.empty() ? game.name : game.fancyname;
-            if (ImGui::Selectable(name.c_str())){
-                bool ret = testGame(game);
-                if (!ret) { CreateMsg("Handler is malformed or corrupt. Check log for more details"); continue; }
-                else { openGamepads(); cur_game = game; cur_page = PlayersMenu; GamepadNav(false); }
+        for (Handler& h: handler_list){
+            if (ImGui::Selectable(h.Name().c_str())){
+                if (h.Test() == false) { CreateMsg("Handler is malformed or corrupt. Check log for more details"); continue; }
+                else { openGamepads(); handler = &h; cur_page = PlayersMenu; GamepadNav(false); }
             }
         }
         if (ImGui::Button("Back", ImVec2(-FLT_MIN, 40)) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) cur_page = MainMenu;
