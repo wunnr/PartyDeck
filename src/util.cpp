@@ -46,14 +46,12 @@ T JsonValue(nlohmann::json& json, const std::string& key, const T& defaultvalue)
     return defaultvalue;
 }
 
-// Same but with strvector
-strvector JsonArray(nlohmann::json& j, string field){
+template<typename T>
+std::vector<T> JsonArray(nlohmann::json& j, string key){
     strvector out;
-    LOG("[Util] jsonToStrvector: " << field << " = ");
-    if (j.contains(field) && j[field].is_array()){
-        for (const auto& i : j[field]){
-            LOG(string(i) << ", ");
-            out.push_back(string(i));
+    if (j.contains(key) && j[key].is_array()){
+        for (const auto& i : j[key]){
+            out.push_back(i.get<T>());
         }
     }
     return out;

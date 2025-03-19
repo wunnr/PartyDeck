@@ -11,7 +11,7 @@
 // For a multi-platform app consider using e.g. SDL+DirectX on Windows and SDL+OpenGL on Linux/OSX.
 
 #include "shared.h"
-#include "ui.cpp"
+#include "gui.cpp"
 #include "util.cpp"
 
 #include "imgui.h"
@@ -20,15 +20,15 @@
 
 #include <SDL2/SDL.h>
 
-const string PATH_EXECDIR = fs::read_symlink("/proc/self/exe").parent_path().string();
-const string PATH_LOCAL_SHARE = Util::EnvVar("HOME") + "/.local/share";
-const string PATH_PARTY = PATH_LOCAL_SHARE + "/partydeck";
-const string PATH_STEAM = (Util::EnvVar("STEAM_BASE_FOLDER").empty()) ? (PATH_LOCAL_SHARE + "/Steam") : Util::EnvVar("STEAM_BASE_FOLDER");
-string PATH_SYM;
+const path PATH_EXECDIR = fs::read_symlink("/proc/self/exe").parent_path();
+const path PATH_LOCAL_SHARE = path(Util::EnvVar("HOME")) / ".local/share";
+const path PATH_PARTY = PATH_LOCAL_SHARE / "partydeck";
+const path PATH_STEAM = (Util::EnvVar("STEAM_BASE_FOLDER").empty()) ? (PATH_LOCAL_SHARE / "Steam") : path(Util::EnvVar("STEAM_BASE_FOLDER"));
+path PATH_SYM;
 std::vector<Gamepad> GAMEPADS{};
 std::vector<Player> PLAYERS{};
 nlohmann::json SETTINGS;
-std::ofstream f_log(string(PATH_EXECDIR + "/log.txt").c_str());
+std::ofstream f_log((PATH_EXECDIR / "log.txt").string().data());
 
 int main(int, char**)
 {
@@ -63,16 +63,16 @@ int main(int, char**)
     SDL_SetWindowFullscreen(window, true);
     SDL_ShowWindow(window);
 
-    UI ui(window, renderer);
-    while (ui.running){
+    GUI gui(window, renderer);
+    while (gui.running){
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
-                ui.running = false;
+                gui.running = false;
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
-                ui.running = false;
+                gui.running = false;
         }
         if (SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED)
         {
@@ -80,7 +80,7 @@ int main(int, char**)
             continue;
         }
 
-        ui.doNewFrame();
+        gui.doNewFrame();
     }
 
     // Cleanup

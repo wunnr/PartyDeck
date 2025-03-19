@@ -16,26 +16,7 @@ using std::cout;
 using std::endl;
 using string = std::string;
 using strvector = std::vector<std::string>;
-
-typedef struct {
-    string name;
-    string fancyname;
-    string steam_appdir;
-    string steam_appid;
-    string rootpath;
-    string exec;
-    string runtime;
-    string goldbergpath;
-    strvector args;
-    strvector game_unique_paths;
-    strvector copy_paths;
-    strvector remove_paths;
-    bool is_32bit;
-    bool is_win;
-    bool win_unique_appdata;
-    bool win_unique_documents;
-    bool linux_unique_localshare;
-} Game;
+using path = fs::path;
 
 typedef struct {
     libevdev* dev;
@@ -48,11 +29,11 @@ typedef struct {
     string profile;
 } Player;
 
-extern const string PATH_EXECDIR; // Folder where executable lives
-extern const string PATH_LOCAL_SHARE; // $HOME/.local/share
-extern const string PATH_PARTY; // PATH_DATA_HOME/partydeck
-extern const string PATH_STEAM; // HOME/.local/share/Steam, or $STEAM_BASE_FOLDER
-extern string PATH_SYM; // PARTY/game/[gamename]
+extern const path PATH_EXECDIR; // Folder where executable lives
+extern const path PATH_LOCAL_SHARE; // $HOME/.local/share
+extern const path PATH_PARTY; // PATH_DATA_HOME/partydeck
+extern const path PATH_STEAM; // HOME/.local/share/Steam, or $STEAM_BASE_FOLDER
+extern path PATH_SYM; // PARTY/game/[gamename]
 extern std::vector<Gamepad> GAMEPADS;
 extern std::vector<Player> PLAYERS;
 extern nlohmann::json SETTINGS;
