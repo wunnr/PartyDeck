@@ -25,8 +25,8 @@ This project uses KWin (included with KDE Plasma), Gamescope, qdbus and Bubblewr
 
 If you're running a KDE Plasma session, you can simply run the executable `PartyDeck` to get started. If you're on Steam Deck and want to access PartyDeck from Gaming Mode, simply add `SteamDeckLaunch.sh` as a non-Steam game by right-clicking that file and selecting "Add to Steam". This is a simple script that launches a KWin session from within Gaming Mode, then runs PartyDeck inside of that session
 
-> [!SteamOS]
-> This app requires KDE Plasma 6 for the KWin split-screen. The current stable version of SteamOS still uses Plasma 5, but for now you can update to the Preview channel in the system settings to get Plasma 6.
+> [!NOTE]
+> **SteamOS Users:** This app requires KDE Plasma 6 for the KWin split-screen. The current stable version of SteamOS still uses Plasma 5, but for now you can update to the Preview channel in the system settings to get Plasma 6.
 
 Note that you'll also need a Handler to actually run a game; These will be uploaded to a separate repository, and eventually the project will include a program that helps you generate your own Handler.
 
