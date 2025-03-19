@@ -50,6 +50,7 @@ This KWin Session displays all running game instances. Each instance runs these:
 - The app has only been tested on Arch Linux and SteamOS 3.7.0+. Your mileage may vary if using other Linux distributions.
 - By default, the app reads from `~/.local/share/Steam/` for Steam things like games, Proton, and the Steam Runtime. This can be changed by using the environment variable `STEAM_BASE_FOLDER=/path/to/steam/`.
 - The app can only locate Steam games installed in Steam's default installation folder (`Steam/steamapps/common/`). Support for reading from separate Steam library folders is planned.
+- The only runtimes available right now are the default Steam Linux "scout" runtime, and Proton Experimental. Support for other runtimes (ProtonGE, regular Wine, etc) is planned.
 
 ## Disclaimer
 This software has been created purely for the purposes of academic research. It is not intended to be used to attack other systems. Project maintainers are not responsible or liable for misuse of the software. Use responsibly.
