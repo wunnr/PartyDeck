@@ -24,7 +24,7 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Log File**
-The app should generate a file named `log.txt` next to the executable. Place the contents of the log here.
+The app should generate a file named `log.txt` next to the executable. Add that log file as attachment.
 
 **System Information:**
  - Linux Distribution
