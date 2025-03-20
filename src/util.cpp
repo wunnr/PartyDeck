@@ -28,6 +28,11 @@ bool StrIsNum(const string& str){
     return true;
 }
 
+// Simply wraps a string in \" quotes. Solely for style/visibility improvements
+string Quotes(const string& s){
+    return (string("\"") + s + string("\""));
+}
+
 // Executes a system command verbosely, and warns if return value isn't 0
 int Exec(const string& command){
     LOG("[util] Exec: " << command);
@@ -36,6 +41,30 @@ int Exec(const string& command){
         LOG("[util] Exec: Warn: Command returned " << ret << ". May be error?");
     }
     return ret;
+}
+
+nlohmann::json LoadJson(fs::path path, nlohmann::json& defaultjson){
+    std::ifstream f_json(path.c_str());
+    if (!f_json.is_open()){
+        // TODO: have it print to log either loaded json or default json
+        LOG("[Util] LoadJson: Couldn't open " << path << ". Continuing with default json");
+        return defaultjson;
+    }
+    nlohmann::json j;
+    f_json >> j;
+    f_json.close();
+    return j;
+}
+
+void SaveJson(fs::path path, nlohmann::json& j){
+    std::ofstream o(path.c_str());
+    if (!o.is_open()){
+        // TODO: have it print to log either loaded json or default json
+        LOG("[Util] LoadJson: Couldn't open " << path << " For saving!");
+        throw std::runtime_error("CopyDirRecursive failed!");
+    }
+    o << std::setw(4) << j << std::endl;
+    o.close();
 }
 
 template<typename T>
