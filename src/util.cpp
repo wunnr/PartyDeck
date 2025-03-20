@@ -43,7 +43,7 @@ int Exec(const string& command){
     return ret;
 }
 
-nlohmann::json LoadJson(fs::path path, nlohmann::json& defaultjson){
+nlohmann::json LoadJson(fs::path path, nlohmann::json defaultjson){
     std::ifstream f_json(path.c_str());
     if (!f_json.is_open()){
         // TODO: have it print to log either loaded json or default json
@@ -59,9 +59,8 @@ nlohmann::json LoadJson(fs::path path, nlohmann::json& defaultjson){
 void SaveJson(fs::path path, nlohmann::json& j){
     std::ofstream o(path.c_str());
     if (!o.is_open()){
-        // TODO: have it print to log either loaded json or default json
         LOG("[Util] LoadJson: Couldn't open " << path << " For saving!");
-        throw std::runtime_error("CopyDirRecursive failed!");
+        throw std::runtime_error("Couldn't open " + string(path) + " For saving!");
     }
     o << std::setw(4) << j << std::endl;
     o.close();
