@@ -28,6 +28,7 @@ path PATH_SYM;
 std::vector<Gamepad> GAMEPADS{};
 std::vector<Player> PLAYERS{};
 nlohmann::json SETTINGS;
+nlohmann::json GAMEPATHS;
 std::ofstream f_log((PATH_EXECDIR / "log.txt").string().data());
 
 int main(int, char**)
@@ -38,6 +39,12 @@ int main(int, char**)
     }
 
     if (Util::EnvVar("HOME").empty()) { LOG("[Party] HOME env var isn't set!"); return 1; }
+
+    nlohmann::json defaultsettings = {
+        {"ForceSDL2", false},
+    };
+    SETTINGS = Util::LoadJson(PATH_PARTY/"settings.json", defaultsettings);
+    GAMEPATHS = Util::LoadJson(PATH_PARTY/"gamepaths.json", nlohmann::json::object());
 
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0){
@@ -82,6 +89,8 @@ int main(int, char**)
 
         gui.doNewFrame();
     }
+
+    Util::Exec("qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript \"splitscreen\"");
 
     // Cleanup
     // [If using SDL_MAIN_USE_CALLBACKS: all code below would likely be your SDL_AppQuit() function]
