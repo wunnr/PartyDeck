@@ -37,4 +37,5 @@ extern path PATH_SYM; // PARTY/game/[gamename]
 extern std::vector<Gamepad> GAMEPADS;
 extern std::vector<Player> PLAYERS;
 extern nlohmann::json SETTINGS;
+extern nlohmann::json GAMEPATHS;
 extern std::ofstream f_log;
