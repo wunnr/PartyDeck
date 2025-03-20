@@ -103,54 +103,33 @@ public:
         for (int i = 0; i < PLAYERS.size(); i++){
             // TEMP: make all players guests for now
             PLAYERS[i].profile = Profiles::guestnames[i];
-            fs::path profilepath = fs::path(PATH_PARTY) / "profiles" / PLAYERS[i].profile;
+            fs::path profilepath = fs::path(PATH_PARTY)/"profiles"/PLAYERS[i].profile;
             if (!fs::exists(profilepath)) Profiles::create(PLAYERS[i].profile);
-
         }
 
-        if (handler->CreateProfileUniqueDirs(PLAYERS)){
-            LOG("Failed setting up game dirs for profiles");
-            CreateMsg("Failed setting up game dirs for profiles. Check log for more details.");
-            cur_page = MainMenu;
-            return;
-        }
+        try {
+            handler->CreateProfileUniqueDirs(PLAYERS);
+            handler->CreateGameSymlinkDir();
+            if (handler->IsWin() && !fs::exists(PATH_PARTY/"compatdata")) { handler->CreateCompatdataDir(); }
+            handler->WriteGameLaunchScript(PLAYERS);
 
-        if (handler->CreateGameSymlinkDir() == false){
-            LOG("[party] Failed creating game symlink folder!");
-            CreateMsg("Failed to create game symlink folder. Check log for more details");
-            cur_page = MainMenu;
-            Util::RemoveIfExists(PATH_SYM);
-            return;
+            path path_f_run = PATH_PARTY/"run.sh";
+            path kwinscriptpath = PATH_EXECDIR/"data/splitscreen_kwin.js";
+            // Ideally we should be using some DBus library to do this instead of relying on qdbus but.... eh.....
+            Util::Exec(string("qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript \"" + kwinscriptpath.string() + "\" \"splitscreen\""));
+            Util::Exec(string("qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.start"));
+            closeGamepads();
+            int execret = Util::Exec(path_f_run.string());
+            if (execret != 0) { throw std::runtime_error("Games may have closed unexpectedly. ");
+            } else {running = false;}
         }
-
-        if (handler->CreateCompatdataDir() == false){
-            LOG("[party] Failed creating compatdata folder!");
-            CreateMsg("Failed to create Wine/Proton data folder. Check log for more details");
-            cur_page = MainMenu;
-            Util::RemoveIfExists(PATH_PARTY / "compatdata");
-            return;
-        }
-
-        if (handler->WriteGameLaunchScript(PLAYERS) == false){
-            LOG("[party] Failed writing launch script!");
-            CreateMsg("Failed to write game launch script. Check log for more details");
-            cur_page = MainMenu;
-            return;
-        }
-
-        path path_f_run = PATH_PARTY / "run.sh";
-        path kwinscriptpath = PATH_EXECDIR / "data/splitscreen_kwin.js";
-        // Ideally we should be using some DBus library to do this instead of relying on qdbus but.... eh.....
-        Util::Exec(string("qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript \"" + kwinscriptpath.string() + "\" \"splitscreen\""));
-        Util::Exec(string("qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.start"));
-        closeGamepads();
-        int execret = Util::Exec(path_f_run.string());
-        if (execret != 0) {
-            CreateMsg("Games closed unexpectedly. Check log for more details");
+        catch (const std::runtime_error& e) {
+            LOG(e.what());
+            CreateMsg(string(e.what()) + "\nCheck log for more details");
             GamepadNav(true);
             cur_page = MainMenu;
-        } else {running = false;}
-        Util::Exec("qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript \"splitscreen\"");
+            return;
+        }
     }
 
     void showMainMenu(){
