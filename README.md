@@ -1,4 +1,7 @@
-# PartyDeck
+
+<img src=".github/assets/icon.png" align="left" width="64" height="64">
+
+### `PartyDeck`
 
 A proof-of-concept split-screen game launcher for Linux/SteamOS.
 
