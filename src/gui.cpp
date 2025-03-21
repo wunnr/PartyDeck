@@ -16,6 +16,10 @@
 #define UI_WIDTH_FULL ImGui::GetContentRegionAvail().x
 #define UI_WIDTH_HALF (ImGui::GetContentRegionAvail().x * 0.5f)
 #define UI_WIDTH_THIRD (ImGui::GetContentRegionAvail().x * 0.333333333333333333f)
+#define UI_HEIGHT_BTN 50
+#define UI_BUTTON_FULLW ImVec2(UI_WIDTH_FULL, UI_HEIGHT_BTN)
+#define UI_BUTTON_HALFW ImVec2(UI_WIDTH_HALF, UI_HEIGHT_BTN)
+#define UI_BUTTON_THIRDW ImVec2(UI_WIDTH_THIRD, UI_HEIGHT_BTN)
 
 enum Page {
     MainMenu,
@@ -37,8 +41,8 @@ private:
     Page cur_page = MainMenu;
     Page prev_page;
 
-    bool show_msg = false;
-    string msg_text;
+    bool show_popup = false;
+    string popup_text;
     char input_box[1024] = {0};
 
     bool show_demo_window = true;
@@ -63,6 +67,10 @@ public:
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
         io.IniFilename = NULL;
         ImFont* font = io.Fonts->AddFontFromFileTTF("data/DroidSans.ttf", 36.0f, nullptr);
+        // io.FontGlobalScale = 2;
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.FrameRounding = 6;
+        // style.ScaleAllSizes(2);
         IM_ASSERT(font != nullptr);
 
         // Setup Dear ImGui style
@@ -84,17 +92,20 @@ public:
         else io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
     }
 
-    void CreateMsg(std::string s) {
-        show_msg = true;
-        msg_text = s;
+    void CreatePopup(std::string s) {
+        popup_text = s;
+        show_popup = true;
     }
 
-    void ShowMsg(){
-        ImGui::SetNextWindowFocus();
-        ImGui::Begin("Message");
-        ImGui::TextWrapped("%s", msg_text.c_str());
-        if (ImGui::Button("OK")) show_msg = false;
-        ImGui::End();
+    void DoPopup(){
+        ResizeAndCenterNext(500, 200);
+        ImGui::OpenPopup("Message");
+        if (ImGui::BeginPopupModal("Message", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+            ImGui::TextWrapped("%s", popup_text.c_str());
+            ImGui::Separator();
+            if (ImGui::Button("OK", UI_BUTTON_FULLW)) { show_popup = false; }
+            ImGui::EndPopup();
+        }
     }
 
     void DoGameStuff(){
@@ -125,7 +136,7 @@ public:
         }
         catch (const std::runtime_error& e) {
             LOG(e.what());
-            CreateMsg(string(e.what()) + "\nCheck log for more details");
+            CreatePopup(string(e.what()) + "\nCheck log for more details");
             GamepadNav(true);
             cur_page = MainMenu;
             return;
@@ -133,24 +144,21 @@ public:
     }
 
     void showMainMenu(){
-        ResizeAndCenterNext(400, 400);
-        ImGui::Begin("PartyDeck", NULL, window_flags);
-        if (ImGui::Button("Play", ImVec2(-FLT_MIN, 40))){
+        ResizeAndCenterNext(500, 500);
+        ImGui::Begin("PartyDeck", NULL);
+        if (ImGui::Button("Play", UI_BUTTON_FULLW)){
             handler_list = scanHandlers();
             cur_page = SelectGame;
         }
-        if (ImGui::Button("Settings", ImVec2(UI_WIDTH_HALF, 40))) cur_page = SettingsMenu;
-        ImGui::SameLine(); if (ImGui::Button("Profiles", ImVec2(UI_WIDTH_FULL, 40))) {
+        ImGui::SetItemDefaultFocus();
+        if (ImGui::Button("Settings", UI_BUTTON_HALFW)) cur_page = SettingsMenu;
+        ImGui::SameLine(); if (ImGui::Button("Profiles", UI_BUTTON_FULLW)) {
             profiles_list = Profiles::listAll(false);
             cur_page = ProfilesMenu;
         }
-        // if (ImGui::Button("DemoWindow", ImVec2(-FLT_MIN, 40))) cur_page = DemoWindow;
-        // if (ImGui::Button("Test Players", ImVec2(-FLT_MIN, 40))) {
-        //     PLAYERS.clear();
-        //     GamepadNav(false);
-        //     cur_page = PlayersMenu;
-        // }
-        if (ImGui::Button("Quit", ImVec2(-FLT_MIN, 40))) running = false;
+        if (ImGui::Button("DemoWindow", UI_BUTTON_FULLW)) { cur_page = DemoWindow; }
+        if (ImGui::Button("popuptest", UI_BUTTON_FULLW)) { CreatePopup("hi!"); }
+        if (ImGui::Button("Quit", UI_BUTTON_FULLW)) { running = false; }
         // if (ImGui::InputText("test", input_box, sizeof(input_box), ImGuiInputTextFlags_EnterReturnsTrue)){
         //     CreateMsg(string(input_box));
         // }
@@ -162,34 +170,55 @@ public:
         if (ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) cur_page = MainMenu;
     }
 
+    void showSettingsMenu(){
+        ResizeAndCenterNext(500, 500);
+        ImGui::Begin("Settings");
+        ImGui::Checkbox("Force latest SDL2 version", &SETTINGS["force_sdl2_version"].get_ref<bool&>());
+        if (ImGui::Button("Erase Game Symlink Folders", UI_BUTTON_FULLW)){ Util::RemoveIfExists(PATH_PARTY/"game"); }
+        if (ImGui::Button("Erase Profile Folders", UI_BUTTON_FULLW)){ Util::RemoveIfExists(PATH_PARTY/"profiles"); }
+        if (ImGui::Button("Back", UI_BUTTON_FULLW)){
+            try {
+                Util::SaveJson(PATH_PARTY/"settings.json", SETTINGS);
+            }
+            catch (std::runtime_error& e){
+                CreatePopup(e.what());
+            }
+            cur_page = MainMenu;
+        }
+        ImGui::End();
+    }
+
     void showProfilesMenu(){
-        ResizeAndCenterNext(400, 400);
+        ResizeAndCenterNext(500, 500);
         ImGui::Begin("Profiles");
         for (const string& profile : profiles_list){
             ImGui::Selectable(profile.c_str());
         }
-        if (ImGui::Button("Back", ImVec2(UI_WIDTH_HALF, 40)) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) cur_page = MainMenu;
-        ImGui::SameLine(); if (ImGui::Button("New", ImVec2(UI_WIDTH_FULL, 40))) cur_page = CreateProfileMenu;
+        if (ImGui::Button("Back", UI_BUTTON_HALFW) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) cur_page = MainMenu;
+        ImGui::SameLine(); if (ImGui::Button("New", UI_BUTTON_FULLW)) cur_page = CreateProfileMenu;
         ImGui::End();
     }
 
     void showSelectGame(){
-        ResizeAndCenterNext(400, 400);
+        ResizeAndCenterNext(500, 500);
         ImGui::Begin("Select Game", NULL, window_flags);
+        ImGui::Text("Select Game:");
+        ImGui::BeginChild("GamesScrollableList", ImVec2(UI_WIDTH_FULL, 200), ImGuiChildFlags_Borders);
         for (Handler& h: handler_list){
             if (ImGui::Selectable(h.Name().c_str())){
-                if (h.Test() == false) { CreateMsg("Handler is malformed or corrupt. Check log for more details"); continue; }
+                if (h.Test() == false) { CreatePopup("Handler is malformed or corrupt. Check log for more details"); continue; }
                 else { openGamepads(); handler = &h; cur_page = PlayersMenu; GamepadNav(false); }
             }
         }
-        if (ImGui::Button("Back", ImVec2(-FLT_MIN, 40)) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) cur_page = MainMenu;
+        ImGui::EndChild();
+        if (ImGui::Button("Back", UI_BUTTON_FULLW) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) cur_page = MainMenu;
         ImGui::End();
     }
 
     void showPlayersMenu(){
-        ResizeAndCenterNext(400, 400);
+        ResizeAndCenterNext(500, 500);
         ImGui::Begin("Players");
-        if (GAMEPADS.size() == 0) { ImGui::Text("No gamepads detected. Connect a gamepad and click Rescan"); }
+        if (GAMEPADS.size() == 0) { ImGui::TextWrapped("No gamepads detected. Connect a gamepad and click Rescan"); }
         else { ImGui::TextWrapped("A/X: Add gamepad\nB/Circle: Remove gamepad/Go back\nStart: Begin game"); }
         for (int i = 0; i < PLAYERS.size(); i++){
             const char* padname = libevdev_get_name(PLAYERS[i].pad.dev);
@@ -204,12 +233,12 @@ public:
             }
         }
         int ret = doPlayersMenu();
-        if (ImGui::Button("Back", ImVec2(UI_WIDTH_THIRD, 40)) || ret == -1){
+        if (ImGui::Button("Back", UI_BUTTON_THIRDW) || ret == -1){
             GamepadNav(true);
             cur_page = MainMenu;
         }
-        ImGui::SameLine(); if (ImGui::Button("Rescan", ImVec2(UI_WIDTH_HALF, 40))) { GAMEPADS.clear(); openGamepads(); }
-        ImGui::SameLine(); if (ImGui::Button("Start", ImVec2(UI_WIDTH_FULL, 40))) { if (PLAYERS.size() > 0) cur_page = GameLoading; }
+        ImGui::SameLine(); if (ImGui::Button("Rescan", UI_BUTTON_HALFW)) { GAMEPADS.clear(); openGamepads(); }
+        ImGui::SameLine(); if (ImGui::Button("Start", UI_BUTTON_FULLW)) { if (PLAYERS.size() > 0) cur_page = GameLoading; }
         ImGui::End();
         if (cur_page == GameLoading){
             ResizeAndCenterNext(300, 200);
@@ -224,10 +253,12 @@ public:
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
-        if (show_msg) ShowMsg();
+        if (show_popup) DoPopup();
+
         switch (cur_page){
             case MainMenu: showMainMenu(); break;
             case DemoWindow: showDemoWindow(); break;
+            case SettingsMenu: showSettingsMenu(); break;
             case ProfilesMenu: showProfilesMenu(); break;
             case SelectGame: showSelectGame(); break;
             case PlayersMenu: showPlayersMenu(); break;
