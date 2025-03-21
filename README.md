@@ -5,6 +5,8 @@
 
 A proof-of-concept split-screen game launcher for Linux/SteamOS.
 
+---
+
 > [!IMPORTANT]
 > This is the first serious software project I've ever done. It surely contains many violations of software best practices and security flaws, and has not been audited at all. Use at your own discretion! If you are experienced in software I would love to know what aspects of the codebase could be improved and how I can do better.
 
