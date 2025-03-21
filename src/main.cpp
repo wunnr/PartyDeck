@@ -1,15 +1,3 @@
-// Dear ImGui: standalone example application for SDL2 + SDL_Renderer
-// (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
-
-// Learn about Dear ImGui:
-// - FAQ                  https://dearimgui.com/faq
-// - Getting Started      https://dearimgui.com/getting-started
-// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
-// - Introduction, links and more at the top of imgui.cpp
-
-// Important to understand: SDL_Renderer is an _optional_ component of SDL2.
-// For a multi-platform app consider using e.g. SDL+DirectX on Windows and SDL+OpenGL on Linux/OSX.
-
 #include "shared.h"
 #include "gui.cpp"
 #include "util.cpp"
@@ -29,7 +17,7 @@ std::vector<Gamepad> GAMEPADS{};
 std::vector<Player> PLAYERS{};
 nlohmann::json SETTINGS;
 nlohmann::json GAMEPATHS;
-std::ofstream f_log((PATH_EXECDIR / "log.txt").string().data());
+std::ofstream f_log((PATH_EXECDIR/"log.txt").string().data());
 
 int main(int, char**)
 {
@@ -41,7 +29,7 @@ int main(int, char**)
     if (Util::EnvVar("HOME").empty()) { LOG("[Party] HOME env var isn't set!"); return 1; }
 
     nlohmann::json defaultsettings = {
-        {"ForceSDL2", false},
+        {"force_sdl2_version", false},
     };
     SETTINGS = Util::LoadJson(PATH_PARTY/"settings.json", defaultsettings);
     GAMEPATHS = Util::LoadJson(PATH_PARTY/"gamepaths.json", nlohmann::json::object());
