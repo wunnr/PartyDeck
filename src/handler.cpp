@@ -244,10 +244,10 @@ public:
 
         f_run << "#!/bin/bash" << endl;
         f_run << "export SDL_JOYSTICK_HIDAPI=0" << endl;
-        // TODO: Check for setting before doing this
-        if (is_32bit){ // SDL2 COMPAT
-            f_run << "export SDL_DYNAMIC_API=" << PATH_STEAM << "/ubuntu12_32/steam-runtime/usr/lib/i386-linux-gnu/libSDL2-2.0.so.0" << endl;
-        } else { f_run << "export SDL_DYNAMIC_API=" << PATH_STEAM << "/ubuntu12_32/steam-runtime/usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0" << endl; }
+        if (SETTINGS.contains("force_sdl2_version") && SETTINGS["force_sdl2_version"] == true){
+            if (is_32bit){ f_run << "export SDL_DYNAMIC_API=" << PATH_STEAM << "/ubuntu12_32/steam-runtime/usr/lib/i386-linux-gnu/libSDL2-2.0.so.0" << endl; }
+            else { f_run << "export SDL_DYNAMIC_API=" << PATH_STEAM << "/ubuntu12_32/steam-runtime/usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0" << endl; }
+        }
         if (runtime == "proton"){
             f_run << "export STEAM_COMPAT_CLIENT_INSTALL_PATH=" << Quotes(PATH_STEAM) << endl;
             f_run << "export STEAM_COMPAT_DATA_PATH=" << Quotes(PATH_PARTY/"compatdata") << endl;
