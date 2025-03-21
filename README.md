@@ -1,7 +1,7 @@
 
-<img src=".github/assets/icon.png" align="left" width="48" height="48">
+<img src=".github/assets/icon.png" align="left" width="100" height="100">
 
-# `PartyDeck`
+### `PartyDeck`
 
 A proof-of-concept split-screen game launcher for Linux/SteamOS.
 
