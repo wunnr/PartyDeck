@@ -1,5 +1,5 @@
 
-<img src=".github/assets/icon.png" align="left" width="64" height="64">
+<img src=".github/assets/icon.png" align="left" width="48" height="48">
 
 # `PartyDeck`
 
