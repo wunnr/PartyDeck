@@ -11,6 +11,7 @@ namespace Util
 {
 
 bool StrIsAlnum(const string& str){
+    if (str.empty()) { return false; }
     for(const char& c : str) {
         if (!isalnum(c)){
             return false;
@@ -20,6 +21,7 @@ bool StrIsAlnum(const string& str){
 }
 
 bool StrIsNum(const string& str){
+    if (str.empty()) { return false; }
     for(const char& c : str) {
         if (!isdigit(c)){
             return false;

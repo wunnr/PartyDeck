@@ -33,6 +33,7 @@ int main(int, char**)
     };
     SETTINGS = Util::LoadJson(PATH_PARTY/"settings.json", defaultsettings);
     GAMEPATHS = Util::LoadJson(PATH_PARTY/"gamepaths.json", nlohmann::json::object());
+    Profiles::removeGuests();
 
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0){
@@ -75,13 +76,13 @@ int main(int, char**)
             continue;
         }
 
-        gui.doNewFrame();
+        gui.DoNewFrame();
     }
 
     Util::Exec("qdbus org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript \"splitscreen\"");
 
     // Cleanup
-    // [If using SDL_MAIN_USE_CALLBACKS: all code below would likely be your SDL_AppQuit() function]
+    Profiles::removeGuests();
     ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();

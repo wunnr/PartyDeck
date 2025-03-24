@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
+#include "util.cpp"
 #include <SDL2/SDL.h>
 
 #include <cstddef>
@@ -32,6 +33,9 @@ enum Page {
     GameLoading
 };
 
+
+// Not happy with the way this is structured, there is a lot of non-GUI stuff going on in this GUI class.....
+// May have to split some of this stuff into a Manager class or something along those lines.
 class GUI {
 private:
     SDL_Window* win;
@@ -67,15 +71,13 @@ public:
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
         io.IniFilename = NULL;
         ImFont* font = io.Fonts->AddFontFromFileTTF("data/DroidSans.ttf", 36.0f, nullptr);
+        IM_ASSERT(font != nullptr);
         // io.FontGlobalScale = 2;
         ImGuiStyle& style = ImGui::GetStyle();
         style.FrameRounding = 6;
-        // style.ScaleAllSizes(2);
-        IM_ASSERT(font != nullptr);
-
-        // Setup Dear ImGui style
         ImGui::StyleColorsDark();
-        // Setup Platform/Renderer backends
+        // style.ScaleAllSizes(2);
+
         ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
         ImGui_ImplSDLRenderer2_Init(renderer);
     }
@@ -98,13 +100,25 @@ public:
     }
 
     void DoPopup(){
-        ResizeAndCenterNext(500, 200);
+        ResizeAndCenterNext(500, 300);
         ImGui::OpenPopup("Message");
         if (ImGui::BeginPopupModal("Message", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
             ImGui::TextWrapped("%s", popup_text.c_str());
             ImGui::Separator();
             if (ImGui::Button("OK", UI_BUTTON_FULLW)) { show_popup = false; }
             ImGui::EndPopup();
+        }
+    }
+
+    void DoCreateProfile(){
+        string name = string(input_box);
+        if (Util::StrIsAlnum(name)){
+            Profiles::create(name);
+            profiles_list = Profiles::listAll(false);
+            cur_page = ProfilesMenu;
+        }
+        else {
+            CreatePopup(Util::Quotes(name) + " isn't a valid name");
         }
     }
 
@@ -159,9 +173,6 @@ public:
         if (ImGui::Button("DemoWindow", UI_BUTTON_FULLW)) { cur_page = DemoWindow; }
         if (ImGui::Button("popuptest", UI_BUTTON_FULLW)) { CreatePopup("hi!"); }
         if (ImGui::Button("Quit", UI_BUTTON_FULLW)) { running = false; }
-        // if (ImGui::InputText("test", input_box, sizeof(input_box), ImGuiInputTextFlags_EnterReturnsTrue)){
-        //     CreateMsg(string(input_box));
-        // }
         ImGui::End();
     }
 
@@ -191,26 +202,61 @@ public:
     void showProfilesMenu(){
         ResizeAndCenterNext(500, 500);
         ImGui::Begin("Profiles");
-        for (const string& profile : profiles_list){
-            ImGui::Selectable(profile.c_str());
+        if (profiles_list.empty()) {
+            ImGui::TextWrapped("No profiles exist. Create new profiles to keep save data and settings from games!");
         }
-        if (ImGui::Button("Back", UI_BUTTON_HALFW) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) cur_page = MainMenu;
-        ImGui::SameLine(); if (ImGui::Button("New", UI_BUTTON_FULLW)) cur_page = CreateProfileMenu;
+        else {
+            ImGui::BeginChild("ProfilesScrollableList", ImVec2(UI_WIDTH_FULL, 200), ImGuiChildFlags_Borders);
+            for (const string& profile : profiles_list){
+                ImGui::Selectable(profile.c_str());
+            }
+            ImGui::EndChild();
+        }
+        if (ImGui::Button("Back", UI_BUTTON_HALFW) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) { cur_page = MainMenu; }
+        ImGui::SameLine(); if (ImGui::Button("New", UI_BUTTON_FULLW)) { cur_page = CreateProfileMenu; }
+        ImGui::End();
+    }
+
+    void showCreateProfileMenu(){
+        ResizeAndCenterNext(450, 300);
+        ImGui::Begin("Create Profile");
+        ImGui::TextWrapped("Write name of new profile here:\n(Letters and numbers only)");
+        ImGui::Spacing();
+        ImGui::PushItemWidth(UI_WIDTH_FULL);
+        if (ImGui::InputText("##input", input_box, sizeof(input_box), ImGuiInputTextFlags_EnterReturnsTrue)){
+            DoCreateProfile();
+        }
+        ImGui::PopItemWidth();
+        if (ImGui::Button("Back", UI_BUTTON_HALFW) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) cur_page = ProfilesMenu;
+        ImGui::SameLine(); if (ImGui::Button("Create", UI_BUTTON_FULLW)) { DoCreateProfile(); }
         ImGui::End();
     }
 
     void showSelectGame(){
         ResizeAndCenterNext(500, 500);
         ImGui::Begin("Select Game", NULL, window_flags);
-        ImGui::Text("Select Game:");
-        ImGui::BeginChild("GamesScrollableList", ImVec2(UI_WIDTH_FULL, 200), ImGuiChildFlags_Borders);
-        for (Handler& h: handler_list){
-            if (ImGui::Selectable(h.Name().c_str())){
-                if (h.Test() == false) { CreatePopup("Handler is malformed or corrupt. Check log for more details"); continue; }
-                else { openGamepads(); handler = &h; cur_page = PlayersMenu; GamepadNav(false); }
-            }
+        if (handler_list.empty()) {
+            ImGui::TextWrapped("No handlers found. Place handlers in \"[PartyDeck dir]/handlers\"");
         }
-        ImGui::EndChild();
+        else {
+            ImGui::Text("Select Game:");
+            ImGui::Separator();
+            ImGui::BeginChild("GamesScrollableList", ImVec2(UI_WIDTH_FULL, 200), ImGuiChildFlags_Borders);
+            for (Handler& h: handler_list){
+                if (ImGui::Selectable(h.Name().c_str())){
+                    if (h.Test() == false) { CreatePopup("Handler is malformed or corrupt. Check log for more details"); continue; }
+                    else {
+                        openGamepads();
+                        handler = &h;
+                        cur_page = PlayersMenu;
+                        GamepadNav(false);
+                        profiles_list = Profiles::listAll(true);
+                    }
+                }
+            }
+            ImGui::EndChild();
+        }
+        ImGui::SetItemDefaultFocus();
         if (ImGui::Button("Back", UI_BUTTON_FULLW) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) cur_page = MainMenu;
         ImGui::End();
     }
@@ -219,25 +265,26 @@ public:
         ResizeAndCenterNext(500, 500);
         ImGui::Begin("Players");
         if (GAMEPADS.size() == 0) { ImGui::TextWrapped("No gamepads detected. Connect a gamepad and click Rescan"); }
-        else { ImGui::TextWrapped("A/X: Add gamepad\nB/Circle: Remove gamepad/Go back\nStart: Begin game"); }
-        for (int i = 0; i < PLAYERS.size(); i++){
-            const char* padname = libevdev_get_name(PLAYERS[i].pad.dev);
-            ImGui::TextColored(player_colors[i], "P%i: ", i + 1);
-            ImGui::SameLine(); ImGui::TextColored(player_colors[i], "%s", padname);
-            ImGui::SameLine(); ImGui::TextColored(player_colors[i], "%i", PLAYERS[i].profilechoice);
-            switch (pollGamepad(PLAYERS[i].pad.dev)){
-                // case UI_LEFT: { PLAYERS[i].profilechoice--; break; }
-                // case UI_RIGHT: { PLAYERS[i].profilechoice++; break;}
-                case UI_BACK: { PLAYERS.erase(PLAYERS.begin() + i); break; }
-                case UI_START: { cur_page = GameLoading; break; }
+        else {
+            ImGui::TextWrapped("[A/X]: Add player\n[Left/Right]: Switch profiles\n[B/Circle]: Remove player/Back\n[Start]: Begin game");
+            ImGui::Separator();
+            for (int i = 0; i < PLAYERS.size(); i++){
+                const char* padname = libevdev_get_name(PLAYERS[i].pad.dev);
+                const char* curprofile = profiles_list[PLAYERS[i].profilechoice].c_str();
+                ImGui::TextColored(player_colors[i], "Player %i: < %s >", (i + 1), curprofile);
+
+                switch (pollGamepad(PLAYERS[i].pad.dev)){
+                    case UI_LEFT: { Profiles::ChoiceCycle(i, Profiles::Prev, profiles_list.size()); break; }
+                    case UI_RIGHT: { Profiles::ChoiceCycle(i, Profiles::Next, profiles_list.size()); break;}
+                    case UI_BACK: { PLAYERS.erase(PLAYERS.begin() + i); break; }
+                    case UI_START: { cur_page = GameLoading; break; }
+                }
             }
         }
+        ImGui::SetItemDefaultFocus();
         int ret = doPlayersMenu();
-        if (ImGui::Button("Back", UI_BUTTON_THIRDW) || ret == -1){
-            GamepadNav(true);
-            cur_page = MainMenu;
-        }
-        ImGui::SameLine(); if (ImGui::Button("Rescan", UI_BUTTON_HALFW)) { GAMEPADS.clear(); openGamepads(); }
+        if (ImGui::Button("Back", UI_BUTTON_THIRDW) || ret == -1) { PLAYERS.clear(); GAMEPADS.clear(); GamepadNav(true); cur_page = MainMenu; }
+        ImGui::SameLine(); if (ImGui::Button("Rescan", UI_BUTTON_HALFW)) { PLAYERS.clear(); GAMEPADS.clear(); openGamepads(); }
         ImGui::SameLine(); if (ImGui::Button("Start", UI_BUTTON_FULLW)) { if (PLAYERS.size() > 0) cur_page = GameLoading; }
         ImGui::End();
         if (cur_page == GameLoading){
@@ -248,7 +295,7 @@ public:
         }
     }
 
-    void doNewFrame(){
+    void DoNewFrame(){
         ImGui_ImplSDLRenderer2_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
@@ -260,6 +307,7 @@ public:
             case DemoWindow: showDemoWindow(); break;
             case SettingsMenu: showSettingsMenu(); break;
             case ProfilesMenu: showProfilesMenu(); break;
+            case CreateProfileMenu: showCreateProfileMenu(); break;
             case SelectGame: showSelectGame(); break;
             case PlayersMenu: showPlayersMenu(); break;
             default: break;

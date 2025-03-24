@@ -13,17 +13,17 @@ namespace Profiles
 const strvector guestnames = {"Player1", "Player2", "Player3", "Player4", "Player5", "Player6"};
 
 bool create(string name) {
-    path path_profile = PATH_PARTY / "profiles" / name;
-    const strvector subdirs = {
-        "/windata/Documents",
-        "/windata/AppData",
-        "/share",
-        "/steam/settings"
+    path path_profile = PATH_PARTY/"profiles"/name;
+    const std::vector<path> subdirs = {
+        path_profile/"windata/Documents",
+        path_profile/"windata/AppData",
+        path_profile/"share",
+        path_profile/"steam/settings"
     };
 
-    for (const string& dir : subdirs) {
+    for (const path& dir : subdirs) {
         try {
-            fs::create_directories(path_profile / dir);
+            fs::create_directories(dir);
         }
         catch (const fs::filesystem_error& e) {
             std::cerr << "Filesystem error: " << e.what() << std::endl;
@@ -72,6 +72,37 @@ void removeGuests(){
         string guestpath = PATH_PARTY / "profiles" / name;
         Util::RemoveIfExists(guestpath);
     }
+}
+
+bool alreadyInUse(int p, int num){
+    if (num == 0) { return false; } // 0 is guest, so allow multiple players to be 0
+    for (int i = 0; i < PLAYERS.size(); i++){
+        if (i == p) { continue; }
+        if (PLAYERS[i].profilechoice == num) { return true; }
+    }
+    return false;
+}
+
+enum CycleDirection { Next, Prev };
+// Cycles a player (PLAYERS[p]) through the list of available profiles, forward or backwards depending on enum
+void ChoiceCycle(int p, CycleDirection dir, int max){
+    LOG("max is: " << max);
+    LOG("choice was: " << PLAYERS[p].profilechoice);
+    while (true){
+        // ++ or -- depending on direction
+        if (dir == Next) { LOG("++"); PLAYERS[p].profilechoice++; }
+        else if (dir == Prev) { LOG("--"); PLAYERS[p].profilechoice--; }
+        LOG("choice is: " << PLAYERS[p].profilechoice);
+        // Wrap around if choice goes outside the range [ 0 to (max-1) ]
+        if (PLAYERS[p].profilechoice >= max) { LOG("wrapped to 0"); PLAYERS[p].profilechoice = 0; }
+        else if (PLAYERS[p].profilechoice < 0) { LOG("wrapped to end"); PLAYERS[p].profilechoice = (max - 1); }
+
+        // Finally, check if the spot is open. If not, keep cycling.
+        if (!alreadyInUse(p, PLAYERS[p].profilechoice)) { break; }
+        LOG(PLAYERS[p].profilechoice << "already in use!");
+    }
+    LOG("choice is now: " << PLAYERS[p].profilechoice);
+    return;
 }
 
 }
