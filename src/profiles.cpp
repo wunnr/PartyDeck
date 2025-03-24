@@ -57,7 +57,8 @@ bool create(string name) {
 // For player profile selection we want to include guest but for the view profiles menu we don't
 strvector listAll(bool include_guest){
     strvector out;
-    for (const auto& entry : fs::directory_iterator(PATH_PARTY / "profiles/")) {
+    if (!fs::exists(PATH_PARTY/"profiles")) { fs::create_directories(PATH_PARTY/"profiles"); }
+    for (const auto& entry : fs::directory_iterator(PATH_PARTY/"profiles/")) {
         if (fs::is_directory(entry)) {
             out.push_back(entry.path().filename().string());
         }
