@@ -125,11 +125,10 @@ public:
     void DoGameStuff(){
         bool ret;
 
+        // Assign profiles to the Players based on their profilechoice number
         for (int i = 0; i < PLAYERS.size(); i++){
-            // TEMP: make all players guests for now
-            PLAYERS[i].profile = Profiles::guestnames[i];
-            fs::path profilepath = fs::path(PATH_PARTY)/"profiles"/PLAYERS[i].profile;
-            if (!fs::exists(profilepath)) Profiles::create(PLAYERS[i].profile);
+            if (PLAYERS[i].profilechoice == 0) { PLAYERS[i].profile = Profiles::guestnames[i]; }
+            else { PLAYERS[i].profile = profiles_list[PLAYERS[i].profilechoice]; }
         }
 
         try {
