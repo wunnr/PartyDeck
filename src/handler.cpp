@@ -33,9 +33,8 @@ private:
     bool win_unique_documents;
     bool linux_unique_localshare;
 public:
-    Handler(string name){
-        path_handler = PATH_EXECDIR / "handlers" / name;
-        path path_handler_json = path_handler / "info.json";
+    Handler(path path_handler_json){
+        path_handler = path_handler_json.parent_path();
         std::ifstream f_game(path_handler_json.c_str());
         if (!f_game.is_open()){
             LOG("[party] Couldn't open " << path_handler_json);
@@ -44,7 +43,7 @@ public:
         }
         nlohmann::json json;
         f_game >> json;
-        uid = name;
+        uid = Util::JsonValue(json, "uid", string(""));;
         fancyname = Util::JsonValue(json, "fancyname", string(""));
         steam_appdir = Util::JsonValue(json, "steam_appdir", string(""));
         exec = Util::JsonValue(json, "exec", string(""));
@@ -76,6 +75,11 @@ public:
     }
 
     bool Test(){
+        if (uid.empty() || !Util::StrIsAlnum(uid)){
+            LOG("[Handler] uid empty or not alphanumeric!");
+            return false;
+        }
+
         if (!steam_appdir.empty()){
             path_gameroot = PATH_STEAM/"steamapps/common"/steam_appdir;
         } else {
@@ -109,8 +113,9 @@ public:
             throw std::runtime_error("CopyDirRecursive failed!");
         }
 
-        // If json file has goldbergpath set, copy goldberg files to the specified dir in the symlink path
-        if (path_goldberg.empty()){
+        // If json file has goldbergpath set, copy goldberg files to the specified dir in PATH_SYM
+        // And set up goldberg to be used
+        if (!path_goldberg.empty()){
             path src;
             if (is_32bit) src = PATH_EXECDIR/"data/goldberg/32/";
             else src = PATH_EXECDIR/"data/goldberg/64/";
@@ -138,7 +143,7 @@ public:
             f_steam_appid << steam_appid << endl;
             f_steam_appid.close();
 
-            // Create find_interfaces file from game's original steam dll, put it in sym folder
+            // Find interfaces from original steam_api dll, put them in steam_interfaces.txt for goldberg
             string steam_dll;
             if (is_win) { steam_dll = (is_32bit) ? string("steam_api.dll") : string("steam_api64.dll"); }
             else { steam_dll = string("libsteam_api.so"); }
@@ -151,6 +156,7 @@ public:
             }
         }
 
+        // For the paths in "copy_paths", copy the real files to PATH_SYM, replacing symlink files with the files they pointed to
         for (const auto& path : copy_paths){
             fs::path src = path_gameroot/path;
             fs::path dest = PATH_SYM/path;
@@ -172,12 +178,14 @@ public:
             }
         }
 
+        // Remove any files/directories specified in "remove_paths"
         for (const auto& path : remove_paths){
             fs::path dest = PATH_SYM/path;
             Util::RemoveIfExists(dest);
         }
 
-        string copypath = PATH_EXECDIR/"handlers"/uid/"copy";
+        // If the handler has a folder named "copy" next to it, copy its contents to PATH_SYM
+        path copypath = path_handler/"copy";
         if(fs::exists(copypath) && fs::is_directory(copypath)){
             if (Util::CopyDirRecursive(copypath, PATH_SYM, false) != true) {
                 throw std::runtime_error("CopyDirRecursive failed!"); \
@@ -341,9 +349,9 @@ std::vector<Handler> scanHandlers(){
     std::vector<Handler> out;
     path dir_games = PATH_EXECDIR/"handlers/";
     for (const auto& entry : fs::directory_iterator(dir_games)){
-        if (fs::is_directory(entry) && fs::exists(entry.path()/"info.json")) {
-            string entrystring = entry.path().string();
-            Handler h(entrystring);
+        if (fs::is_directory(entry) && fs::exists(entry.path()/"handler.json")) {
+            string path_json = entry.path()/"handler.json";
+            Handler h(path_json);
             if (h.Valid()) { out.push_back(h); }
         }
     }
