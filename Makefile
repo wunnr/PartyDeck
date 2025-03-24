@@ -40,7 +40,7 @@ LIBS = -lGL -ldl -levdev `sdl2-config --libs`
 
 all: $(EXE)
 	@echo Build complete
-	rm -f $(OBJS)
+	rm -f main.o
 
 $(EXE): $(OBJS)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
