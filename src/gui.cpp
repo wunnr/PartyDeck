@@ -127,7 +127,7 @@ public:
 
         // Assign profiles to the Players based on their profilechoice number
         for (int i = 0; i < PLAYERS.size(); i++){
-            if (PLAYERS[i].profilechoice == 0) { PLAYERS[i].profile = Profiles::guestnames[i]; }
+            if (PLAYERS[i].profilechoice == 0) { Profiles::create(Profiles::guestnames[i]); PLAYERS[i].profile = Profiles::guestnames[i]; }
             else { PLAYERS[i].profile = profiles_list[PLAYERS[i].profilechoice]; }
         }
 
@@ -186,6 +186,7 @@ public:
         ImGui::Checkbox("Force latest SDL2 version", &SETTINGS["force_sdl2_version"].get_ref<bool&>());
         if (ImGui::Button("Erase Game Symlink Folders", UI_BUTTON_FULLW)){ Util::RemoveIfExists(PATH_PARTY/"game"); }
         if (ImGui::Button("Erase Profile Folders", UI_BUTTON_FULLW)){ Util::RemoveIfExists(PATH_PARTY/"profiles"); }
+        if (ImGui::Button("Erase Compatdata Folder", UI_BUTTON_FULLW)){ Util::RemoveIfExists(PATH_PARTY/"compatdata"); }
         if (ImGui::Button("Back", UI_BUTTON_FULLW)){
             try {
                 Util::SaveJson(PATH_PARTY/"settings.json", SETTINGS);
